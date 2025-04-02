@@ -2,52 +2,55 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>선 긋기 연습 (터치 지원)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>손가락으로 선 긋기 연습</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100vh;
+      background: #e6f4ff;
+      overflow: hidden;
+      touch-action: none;
       font-family: sans-serif;
-      background: #f0f9ff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 10px;
     }
 
     h1 {
-      font-size: 24px;
-      margin-bottom: 20px;
+      font-size: 28px;
+      margin: 20px 0;
+      text-align: center;
     }
 
     #gameArea {
       display: flex;
-      gap: 200px;
+      justify-content: center;
+      align-items: center;
+      height: calc(100vh - 100px);
+      gap: 120px;
       position: relative;
-      height: 300px;
-      touch-action: none;
     }
 
     .column {
       display: flex;
       flex-direction: column;
-      gap: 40px;
+      gap: 60px;
     }
 
     .item {
-      font-size: 32px;
-      width: 60px;
-      height: 60px;
+      font-size: 48px;
+      width: 90px;
+      height: 90px;
       text-align: center;
-      line-height: 60px;
+      line-height: 90px;
       border-radius: 50%;
       background: white;
-      border: 3px solid #ccc;
+      border: 4px solid #ccc;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       touch-action: none;
     }
 
     .target {
-      border-color: #93c5fd;
+      border-color: #60a5fa;
     }
 
     .line {
@@ -55,13 +58,15 @@
       height: 4px;
       background: black;
       transform-origin: left center;
+      width: 0;
+      transition: width 0.3s ease;
     }
 
     #messageBox {
-      margin-top: 20px;
-      font-size: 20px;
+      font-size: 22px;
       color: green;
-      height: 24px;
+      text-align: center;
+      height: 30px;
     }
   </style>
 </head>
@@ -73,9 +78,9 @@
   <script>
     const pairsList = [
       [
-        { id: '1', icon: '🍎' },
-        { id: '2', icon: '🐶' },
-        { id: '3', icon: '🚗' }
+        { id: '1', icon: '🚗' },
+        { id: '2', icon: '🍎' },
+        { id: '3', icon: '🐶' }
       ],
       [
         { id: '4', icon: '🍌' },
@@ -164,62 +169,61 @@
     }
 
     function dragEnd(e) {
-  const touch = e.changedTouches ? e.changedTouches[0] : e;
-  const x = touch.clientX;
-  const y = touch.clientY;
+      const touch = e.changedTouches ? e.changedTouches[0] : e;
+      const x = touch.clientX;
+      const y = touch.clientY;
 
-  window.removeEventListener('touchmove', dragMove);
-  window.removeEventListener('touchend', dragEnd);
-  window.removeEventListener('mousemove', dragMove);
-  window.removeEventListener('mouseup', dragEnd);
+      window.removeEventListener('touchmove', dragMove);
+      window.removeEventListener('touchend', dragEnd);
+      window.removeEventListener('mousemove', dragMove);
+      window.removeEventListener('mouseup', dragEnd);
 
-  // 허용 거리 범위
-  const MAX_DISTANCE = 80;
+      const MAX_DISTANCE = 100; // 허용 거리
 
-  // 가장 가까운 타겟 찾기
-  let nearestTarget = null;
-  let minDist = Infinity;
+      let nearestTarget = null;
+      let minDist = Infinity;
 
-  document.querySelectorAll('.target').forEach(target => {
-    const rect = target.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dist = Math.hypot(x - cx, y - cy);
+      document.querySelectorAll('.target').forEach(target => {
+        const rect = target.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dist = Math.hypot(x - cx, y - cy);
 
-    if (dist < minDist && dist <= MAX_DISTANCE) {
-      minDist = dist;
-      nearestTarget = target;
-    }
-  });
+        if (dist < minDist && dist <= MAX_DISTANCE) {
+          minDist = dist;
+          nearestTarget = target;
+        }
+      });
 
-  if (nearestTarget) {
-    const fromId = startEl.dataset.id;
-    const toId = nearestTarget.dataset.id;
+      if (nearestTarget) {
+        const fromId = startEl.dataset.id;
+        const toId = nearestTarget.dataset.id;
 
-    if (fromId === toId) {
-      fixLine(dragLine);
-      startEl.removeEventListener('touchstart', dragStart);
-      startEl.removeEventListener('mousedown', dragStart);
-      nearestTarget.classList.remove('target');
-      messageBox.textContent = '잘했어요! 🎉';
-      correctCount++;
+        if (fromId === toId) {
+          fixLine(dragLine);
+          startEl.removeEventListener('touchstart', dragStart);
+          startEl.removeEventListener('mousedown', dragStart);
+          nearestTarget.classList.remove('target');
+          messageBox.textContent = '잘했어요! 🎉';
+          correctCount++;
 
-      if (correctCount === 3) {
-        setTimeout(() => {
-          currentStage++;
-          loadStage(currentStage);
-        }, 1000);
+          if (correctCount === 3) {
+            setTimeout(() => {
+              currentStage++;
+              loadStage(currentStage);
+            }, 1000);
+          }
+        } else {
+          messageBox.textContent = '다시 시도해볼까? 💪';
+          dragLine.remove();
+        }
+      } else {
+        dragLine.remove();
       }
-    } else {
-      messageBox.textContent = '다시 시도해볼까? 💪';
-      dragLine.remove();
-    }
-  } else {
-    dragLine.remove();
-  }
 
-  startEl = null;
-}
+      startEl = null;
+    }
+
     function createDragLine() {
       dragLine = document.createElement('div');
       dragLine.className = 'line';
