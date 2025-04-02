@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>선 긋기 연습 게임</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f0f9ff;
+      margin: 0;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    #gameArea {
+      display: flex;
+      gap: 200px;
+      position: relative;
+      height: 300px;
+    }
+
+    .column {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+    }
+
+    .item {
+      font-size: 32px;
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      line-height: 60px;
+      border-radius: 50%;
+      background: white;
+      border: 3px solid #ccc;
+      cursor: grab;
+    }
+
+    .target {
+      border-color: #93c5fd;
+    }
+
+    .line {
+      position: absolute;
+      height: 4px;
+      background: black;
+      transform-origin: left center;
+      width: 0;
+      transition: width 0.5s ease;
+    }
+
+    .message {
+      margin-top: 20px;
+      font-size: 20px;
+      color: green;
+      height: 24px;
+    }
+  </style>
+</head>
+<body>
+  <h1>짝 맞춰 선 긋기 🎯</h1>
+  <div id="gameArea"></div>
+  <div id="messageBox" class="message"></div>
+
+  <script>
+    const pairsList = [
+      [
+        { id: '1', icon: '🍎' },
+        { id: '2', icon: '🐶' },
+        { id: '3', icon: '🚗' }
+      ],
+      [
+        { id: '4', icon: '🍌' },
+        { id: '5', icon: '🐱' },
+        { id: '6', icon: '🚌' }
+      ],
+      [
+        { id: '7', icon: '🍇' },
+        { id: '8', icon: '🐰' },
+        { id: '9', icon: '🚲' }
+      ]
+    ];
+
+    let currentStage = 0;
+    let correctCount = 0;
+    const gameArea = document.getElementById('gameArea');
+    const messageBox = document.getElementById('messageBox');
+    let startElement = null;
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function loadStage(stageIndex) {
+      gameArea.innerHTML = ''; // clear previous
+      messageBox.textContent = '';
+      correctCount = 0;
+
+      const pairs = pairsList[stageIndex % pairsList.length];
+      const leftColumn = document.createElement('div');
+      const rightColumn = document.createElement('div');
+      leftColumn.classList.add('column');
+      rightColumn.classList.add('column');
+
+      const leftItems = shuffle([...pairs]);
+      const rightItems = shuffle([...pairs]);
+
+      leftItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.textContent = item.icon;
+        div.setAttribute('draggable', true);
+        div.dataset.id = item.id;
+        div.addEventListener('dragstart', () => {
+          startElement = div;
+        });
+        leftColumn.appendChild(div);
+      });
+
+      rightItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item target';
+        div.textContent = item.icon;
+        div.dataset.id = item.id;
+
+        div.addEventListener('dragover', e => e.preventDefault());
+
+        div.addEventListener('drop', () => {
+          if (!startElement) return;
+
+          const fromId = startElement.dataset.id;
+          const toId = div.dataset.id;
+
+          if (fromId === toId) {
+            drawLine(startElement, div);
+            messageBox.textContent = '잘했어요! 🎉';
+            startElement.setAttribute('draggable', false);
+            div.classList.remove('target');
+            correctCount++;
+
+            if (correctCount === pairs.length) {
+              setTimeout(() => {
+                currentStage++;
+                loadStage(currentStage);
+              }, 1000);
+            }
+          } else {
+            messageBox.textContent = '다시 시도해볼까? 💪';
+          }
+
+          startElement = null;
+        });
+
+        rightColumn.appendChild(div);
+      });
+
+      gameArea.appendChild(leftColumn);
+      gameArea.appendChild(rightColumn);
+    }
+
+    function drawLine(fromEl, toEl) {
+      const fromRect = fromEl.getBoundingClientRect();
+      const toRect = toEl.getBoundingClientRect();
+      const containerRect = gameArea.getBoundingClientRect();
+
+      const x1 = fromRect.left + fromRect.width / 2 - containerRect.left;
+      const y1 = fromRect.top + fromRect.height / 2 - containerRect.top;
+      const x2 = toRect.left + toRect.width / 2 - containerRect.left;
+      const y2 = toRect.top + toRect.height / 2 - containerRect.top;
+
+      const length = Math.hypot(x2 - x1, y2 - y1);
+      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+
+      const line = document.createElement('div');
+      line.className = 'line';
+      line.style.left = `${x1}px`;
+      line.style.top = `${y1}px`;
+      line.style.transform = `rotate(${angle}deg)`;
+
+      gameArea.appendChild(line);
+
+      // Trigger animation
+      setTimeout(() => {
+        line.style.width = `${length}px`;
+      }, 10);
+    }
+
+    loadStage(currentStage);
+  </script>
+</body>
+</html>
