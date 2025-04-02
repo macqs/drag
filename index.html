@@ -2,17 +2,17 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>선 긋기 연습 게임</title>
+  <title>선 긋기 연습 (터치 지원)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
+      margin: 0;
       font-family: sans-serif;
       background: #f0f9ff;
-      margin: 0;
-      padding: 40px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      height: 100vh;
+      padding: 40px 10px;
     }
 
     h1 {
@@ -25,6 +25,7 @@
       gap: 200px;
       position: relative;
       height: 300px;
+      touch-action: none;
     }
 
     .column {
@@ -42,7 +43,7 @@
       border-radius: 50%;
       background: white;
       border: 3px solid #ccc;
-      cursor: grab;
+      touch-action: none;
     }
 
     .target {
@@ -54,11 +55,9 @@
       height: 4px;
       background: black;
       transform-origin: left center;
-      width: 0;
-      transition: width 0.5s ease;
     }
 
-    .message {
+    #messageBox {
       margin-top: 20px;
       font-size: 20px;
       color: green;
@@ -67,9 +66,9 @@
   </style>
 </head>
 <body>
-  <h1>짝 맞춰 선 긋기 🎯</h1>
+  <h1>손가락으로 선 긋기 연습 🎯</h1>
   <div id="gameArea"></div>
-  <div id="messageBox" class="message"></div>
+  <div id="messageBox"></div>
 
   <script>
     const pairsList = [
@@ -82,11 +81,6 @@
         { id: '4', icon: '🍌' },
         { id: '5', icon: '🐱' },
         { id: '6', icon: '🚌' }
-      ],
-      [
-        { id: '7', icon: '🍇' },
-        { id: '8', icon: '🐰' },
-        { id: '9', icon: '🚲' }
       ]
     ];
 
@@ -94,104 +88,129 @@
     let correctCount = 0;
     const gameArea = document.getElementById('gameArea');
     const messageBox = document.getElementById('messageBox');
-    let startElement = null;
+
+    let startEl = null;
+    let dragLine = null;
 
     function shuffle(array) {
       return array.sort(() => Math.random() - 0.5);
     }
 
     function loadStage(stageIndex) {
-      gameArea.innerHTML = ''; // clear previous
+      gameArea.innerHTML = '';
       messageBox.textContent = '';
       correctCount = 0;
 
       const pairs = pairsList[stageIndex % pairsList.length];
       const leftColumn = document.createElement('div');
       const rightColumn = document.createElement('div');
-      leftColumn.classList.add('column');
-      rightColumn.classList.add('column');
+      leftColumn.className = 'column';
+      rightColumn.className = 'column';
 
       const leftItems = shuffle([...pairs]);
       const rightItems = shuffle([...pairs]);
 
       leftItems.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.textContent = item.icon;
-        div.setAttribute('draggable', true);
-        div.dataset.id = item.id;
-        div.addEventListener('dragstart', () => {
-          startElement = div;
-        });
-        leftColumn.appendChild(div);
+        const el = document.createElement('div');
+        el.className = 'item';
+        el.textContent = item.icon;
+        el.dataset.id = item.id;
+        el.addEventListener('touchstart', dragStart, { passive: false });
+        el.addEventListener('mousedown', dragStart);
+        leftColumn.appendChild(el);
       });
 
       rightItems.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'item target';
-        div.textContent = item.icon;
-        div.dataset.id = item.id;
-
-        div.addEventListener('dragover', e => e.preventDefault());
-
-        div.addEventListener('drop', () => {
-          if (!startElement) return;
-
-          const fromId = startElement.dataset.id;
-          const toId = div.dataset.id;
-
-          if (fromId === toId) {
-            drawLine(startElement, div);
-            messageBox.textContent = '잘했어요! 🎉';
-            startElement.setAttribute('draggable', false);
-            div.classList.remove('target');
-            correctCount++;
-
-            if (correctCount === pairs.length) {
-              setTimeout(() => {
-                currentStage++;
-                loadStage(currentStage);
-              }, 1000);
-            }
-          } else {
-            messageBox.textContent = '다시 시도해볼까? 💪';
-          }
-
-          startElement = null;
-        });
-
-        rightColumn.appendChild(div);
+        const el = document.createElement('div');
+        el.className = 'item target';
+        el.textContent = item.icon;
+        el.dataset.id = item.id;
+        rightColumn.appendChild(el);
       });
 
       gameArea.appendChild(leftColumn);
       gameArea.appendChild(rightColumn);
     }
 
-    function drawLine(fromEl, toEl) {
-      const fromRect = fromEl.getBoundingClientRect();
-      const toRect = toEl.getBoundingClientRect();
-      const containerRect = gameArea.getBoundingClientRect();
+    function dragStart(e) {
+      e.preventDefault();
+      startEl = e.currentTarget;
+      createDragLine();
 
-      const x1 = fromRect.left + fromRect.width / 2 - containerRect.left;
-      const y1 = fromRect.top + fromRect.height / 2 - containerRect.top;
-      const x2 = toRect.left + toRect.width / 2 - containerRect.left;
-      const y2 = toRect.top + toRect.height / 2 - containerRect.top;
+      window.addEventListener('touchmove', dragMove, { passive: false });
+      window.addEventListener('touchend', dragEnd);
+      window.addEventListener('mousemove', dragMove);
+      window.addEventListener('mouseup', dragEnd);
+    }
 
-      const length = Math.hypot(x2 - x1, y2 - y1);
-      const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
+    function dragMove(e) {
+      const touch = e.touches ? e.touches[0] : e;
+      const x = touch.clientX;
+      const y = touch.clientY;
 
-      const line = document.createElement('div');
-      line.className = 'line';
-      line.style.left = `${x1}px`;
-      line.style.top = `${y1}px`;
-      line.style.transform = `rotate(${angle}deg)`;
+      const fromRect = startEl.getBoundingClientRect();
+      const startX = fromRect.left + fromRect.width / 2;
+      const startY = fromRect.top + fromRect.height / 2;
 
-      gameArea.appendChild(line);
+      const dx = x - startX;
+      const dy = y - startY;
+      const length = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-      // Trigger animation
-      setTimeout(() => {
-        line.style.width = `${length}px`;
-      }, 10);
+      dragLine.style.width = `${length}px`;
+      dragLine.style.left = `${startX - gameArea.getBoundingClientRect().left}px`;
+      dragLine.style.top = `${startY - gameArea.getBoundingClientRect().top}px`;
+      dragLine.style.transform = `rotate(${angle}deg)`;
+    }
+
+    function dragEnd(e) {
+      const touch = e.changedTouches ? e.changedTouches[0] : e;
+      const x = touch.clientX;
+      const y = touch.clientY;
+      const dropTarget = document.elementFromPoint(x, y);
+
+      window.removeEventListener('touchmove', dragMove);
+      window.removeEventListener('touchend', dragEnd);
+      window.removeEventListener('mousemove', dragMove);
+      window.removeEventListener('mouseup', dragEnd);
+
+      if (dropTarget && dropTarget.classList.contains('target')) {
+        const fromId = startEl.dataset.id;
+        const toId = dropTarget.dataset.id;
+
+        if (fromId === toId) {
+          fixLine(dragLine);
+          startEl.removeEventListener('touchstart', dragStart);
+          startEl.removeEventListener('mousedown', dragStart);
+          dropTarget.classList.remove('target');
+          messageBox.textContent = '잘했어요! 🎉';
+          correctCount++;
+
+          if (correctCount === 3) {
+            setTimeout(() => {
+              currentStage++;
+              loadStage(currentStage);
+            }, 1000);
+          }
+        } else {
+          messageBox.textContent = '다시 시도해볼까? 💪';
+          dragLine.remove();
+        }
+      } else {
+        dragLine.remove();
+      }
+
+      startEl = null;
+    }
+
+    function createDragLine() {
+      dragLine = document.createElement('div');
+      dragLine.className = 'line';
+      gameArea.appendChild(dragLine);
+    }
+
+    function fixLine(line) {
+      line.style.transition = 'width 0.3s ease';
     }
 
     loadStage(currentStage);
