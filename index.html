@@ -164,45 +164,62 @@
     }
 
     function dragEnd(e) {
-      const touch = e.changedTouches ? e.changedTouches[0] : e;
-      const x = touch.clientX;
-      const y = touch.clientY;
-      const dropTarget = document.elementFromPoint(x, y);
+  const touch = e.changedTouches ? e.changedTouches[0] : e;
+  const x = touch.clientX;
+  const y = touch.clientY;
 
-      window.removeEventListener('touchmove', dragMove);
-      window.removeEventListener('touchend', dragEnd);
-      window.removeEventListener('mousemove', dragMove);
-      window.removeEventListener('mouseup', dragEnd);
+  window.removeEventListener('touchmove', dragMove);
+  window.removeEventListener('touchend', dragEnd);
+  window.removeEventListener('mousemove', dragMove);
+  window.removeEventListener('mouseup', dragEnd);
 
-      if (dropTarget && dropTarget.classList.contains('target')) {
-        const fromId = startEl.dataset.id;
-        const toId = dropTarget.dataset.id;
+  // 허용 거리 범위
+  const MAX_DISTANCE = 80;
 
-        if (fromId === toId) {
-          fixLine(dragLine);
-          startEl.removeEventListener('touchstart', dragStart);
-          startEl.removeEventListener('mousedown', dragStart);
-          dropTarget.classList.remove('target');
-          messageBox.textContent = '잘했어요! 🎉';
-          correctCount++;
+  // 가장 가까운 타겟 찾기
+  let nearestTarget = null;
+  let minDist = Infinity;
 
-          if (correctCount === 3) {
-            setTimeout(() => {
-              currentStage++;
-              loadStage(currentStage);
-            }, 1000);
-          }
-        } else {
-          messageBox.textContent = '다시 시도해볼까? 💪';
-          dragLine.remove();
-        }
-      } else {
-        dragLine.remove();
-      }
+  document.querySelectorAll('.target').forEach(target => {
+    const rect = target.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dist = Math.hypot(x - cx, y - cy);
 
-      startEl = null;
+    if (dist < minDist && dist <= MAX_DISTANCE) {
+      minDist = dist;
+      nearestTarget = target;
     }
+  });
 
+  if (nearestTarget) {
+    const fromId = startEl.dataset.id;
+    const toId = nearestTarget.dataset.id;
+
+    if (fromId === toId) {
+      fixLine(dragLine);
+      startEl.removeEventListener('touchstart', dragStart);
+      startEl.removeEventListener('mousedown', dragStart);
+      nearestTarget.classList.remove('target');
+      messageBox.textContent = '잘했어요! 🎉';
+      correctCount++;
+
+      if (correctCount === 3) {
+        setTimeout(() => {
+          currentStage++;
+          loadStage(currentStage);
+        }, 1000);
+      }
+    } else {
+      messageBox.textContent = '다시 시도해볼까? 💪';
+      dragLine.remove();
+    }
+  } else {
+    dragLine.remove();
+  }
+
+  startEl = null;
+}
     function createDragLine() {
       dragLine = document.createElement('div');
       dragLine.className = 'line';
